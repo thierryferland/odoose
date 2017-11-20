@@ -8,7 +8,7 @@ function Schema (obj, options) {
   this.paths = {}
   this.aliases = {}
   this.subpaths = {}
-  this.virtuals = {}
+  this.virtuals = []
   this.singleNestedPaths = {}
   this.nested = {}
   this.inherits = {}
@@ -20,6 +20,18 @@ function Schema (obj, options) {
   this.query = {}
   this.childSchemas = []
   this.plugins = []
+}
+
+/**
+ * Creates a virtual type with the given name.
+ *
+ * @param {String} name
+ * @param {Object} [options]
+ * @return {VirtualType}
+ */
+
+Schema.prototype.virtual = function (name, get) {
+  this.virtuals.push({name: name, get: get})
 }
 
 module.exports = exports = Schema
