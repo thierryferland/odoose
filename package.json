@@ -1,6 +1,6 @@
 {
   "name": "odoose",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "ORM for Odoo",
   "main": "index.js",
   "license": "MIT",
@@ -8,10 +8,7 @@
     "type": "git",
     "url": "https://tferland@bitbucket.org/foodealiste/odoose.git"
   },
-  "dependencies": {
-  },
-  "devDependencies": {
-  },
-  "scripts": {
-  }
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {}
 }
