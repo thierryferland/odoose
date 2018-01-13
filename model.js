@@ -1,7 +1,9 @@
 
+// Shit implementation
+
 function Model (doc, fields, skipId) {
-  var model = doc
-  return model
+  // var model = doc
+  // return model
 }
 
 const setParams = (conditions, projection, schema) => {
@@ -19,7 +21,7 @@ const setParams = (conditions, projection, schema) => {
         }
 
         var options = {fields: []}
-        if (projection == undefined) {
+        if (projection === undefined) {
           projection = Object.keys(schema['obj'])
         }
         projection.forEach((key) => {
@@ -77,18 +79,19 @@ const adapt = (results, schema) => {
     })
 }
 
-Model.compile = function compile (name, schema, collectionName, connection, base) {
+Model.compile = function (name, schema, collectionName, connection, base) {
   var model
-
-  model = this
+  model = new Model()
+  // Bad, to to be changed
+  model.findById = this.findById
+  model.find = this.find
   model.modelName = name
   model.model = Model.prototype.model
   model.db = connection
 
   model.schema = schema
-  model.collection = model.prototype.collection
+  // model.collection = model.prototype.collection
   model.collectionName = collectionName
-
   return model
 }
 
