@@ -47,9 +47,12 @@ const adapt = (results, schema) => {
           var adaptedResult = {}
           Object.keys(schema['obj']).forEach((key) => {
             var path = schema['obj'][key].path
+            var ref = schema['obj'][key].ref
             if (path !== undefined & result[path] !== undefined) {
               if (schema['obj'][key].data !== undefined) {
                 adaptedResult[key] = { data: Buffer.from(result[path], 'base64'), contentType: 'image/jpeg' }
+              } else if (ref !== undefined) {
+                adaptedResult[key] = {'id': result[path][0], 'name': result[path][1]}
               } else {
                 adaptedResult[key] = result[path]
               }
