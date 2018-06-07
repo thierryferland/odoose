@@ -1,7 +1,7 @@
 {
   "name": "odoose",
-  "version": "0.0.5",
-  "description": "ORM for Odoo",
+  "version": "0.0.6",
+  "description": "Adaptor for Odoo web service",
   "main": "index.js",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,13 @@
     "url": "https://tferland@bitbucket.org/foodealiste/odoose.git"
   },
   "dependencies": {},
-  "devDependencies": {},
-  "scripts": {}
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "odoo-xmlrpc": "^1.0.6",
+    "should": "^13.2.1"
+  },
+  "scripts": {
+    "test": "mocha --timeout 10000"
+  }
 }
