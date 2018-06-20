@@ -1,41 +1,69 @@
-
 var Query = require('./query')
-// Shit implementation
 
-function Model (doc, fields, skipId) {
-  // var model = doc
-  // return model
+class Model {
+  constructor (name, schema, collectionName, connection, base) {
+    this.modelName = name
+    // this.model = Model.prototype.model
+    this.db = connection
+    this.schema = schema
+    this.collectionName = collectionName
+    this.modelSchemas = base.modelSchemas
+    this.models = base.models
+  }
+
+  find (conditions, projection, options) {
+    var selectedFields = projection.split(' ')
+    var queryType = 'search_read'
+    var query = new Query(this.db, this.schema, this.collectionName, conditions, selectedFields, queryType, this)
+    return query.exec()
+  }
+
+  findById (id, projection, options) {
+    var selectedFields = projection.split(' ')
+    var queryType = 'read'
+    var query = new Query(this.db, this.schema, this.collectionName, id, selectedFields, queryType, this)
+    return query.exec()
+  }
+
+  populate (options, results) {
+    const queryType = 'read'
+    var selectedFields = options['select'].split(' ')
+    var collectionName = this.models.get('Person').collectionName
+    var schema = this.modelSchemas.get('Person')
+    let promises = []
+    if (!Array.isArray(results)) {
+      let id = results[options['path']]
+      let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this)
+      let func = function (resolve, reject) {
+        try {
+          query.exec().then(populateResult => {
+            results[options['path']] = populateResult
+            resolve(results)
+          })
+        } catch (error) {
+          reject(error)
+        }
+      }
+      return new Promise(func)
+    } else {
+      results.forEach(result => {
+        let id = result[options['path']]
+        let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this)
+        let func = function (resolve, reject) {
+          try {
+            query.exec().then(populateResult => {
+              result[options['path']] = populateResult
+              resolve(result)
+            })
+          } catch (error) {
+            reject(error)
+          }
+        }
+        promises.push(new Promise(func))
+      })
+      return Promise.all(promises)
+    }
+  }
 }
 
-Model.compile = function (name, schema, collectionName, connection, base) {
-  var model
-  model = new Model()
-  // Bad, to to be changed
-  model.findById = this.findById
-  model.find = this.find
-  model.populate = this.populate
-  model.modelName = name
-  model.model = Model.prototype.model
-  model.db = connection
-
-  model.schema = schema
-  // model.collection = model.prototype.collection
-  model.collectionName = collectionName
-  return model
-}
-
-Model.find = function (conditions, projection, options) {
-  var selectedFields = projection.split(' ')
-  var queryType = 'search_read'
-  var query = new Query(this.db, this.schema, this.collectionName, conditions, selectedFields, queryType)
-  return query.exec()
-}
-
-Model.findById = function (id, projection, options) {
-  var selectedFields = projection.split(' ')
-  var queryType = 'read'
-  var query = new Query(this.db, this.schema, this.collectionName, id, selectedFields, queryType)
-  return query.exec()
-}
-
-module.exports = exports = Model
+module.exports = Model
