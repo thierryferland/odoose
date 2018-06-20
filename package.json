@@ -1,6 +1,6 @@
 {
   "name": "odoose",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "Adapter for Odoo web service",
   "main": "index.js",
   "license": "MIT",
