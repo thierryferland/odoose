@@ -28,10 +28,21 @@ class Model {
   populate (options, results) {
     const queryType = 'read'
     var selectedFields = options['select'].split(' ')
-    var collectionName = this.models.get('Person').collectionName
-    var schema = this.modelSchemas.get('Person')
+
+    let isManyReferenced = Array.isArray(this.schema.obj[options['path']])
+    let isManyReferencing = Array.isArray(results)
+
+    let referencedModel
+    if (isManyReferenced) {
+      referencedModel = this.schema.obj[options['path']][0]['ref']
+    } else {
+      referencedModel = this.schema.obj[options['path']]['ref']
+    }
+
+    var collectionName = this.models.get(referencedModel).collectionName
+    var schema = this.modelSchemas.get(referencedModel)
     let promises = []
-    if (!Array.isArray(results)) {
+    if (!isManyReferencing) {
       let id = results[options['path']]
       let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this)
       let func = function (resolve, reject) {
