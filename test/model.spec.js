@@ -58,16 +58,30 @@ var productSchema = new odoose.Schema({
   }
 })
 
+var companySchema = new odoose.Schema({
+  name: {
+    type: String,
+    path: 'name'
+  },
+  person: {
+    type: Object,
+    ref: 'Person',
+    path: 'partner_id'
+  }
+})
+
 odoose.connect(odoo, {})
 
 var User = odoose.model('User', userSchema, 'res.users')
 var Person = odoose.model('Person', personSchema, 'res.partner')
 var Product = odoose.model('Product', productSchema, 'product.product')
+var Company = odoose.model('Company', companySchema, 'res.company')
 
 var models = {
   User: User,
   Person: Person,
-  Product: Product
+  Product: Product,
+  Company: Company
 }
 
 describe('#find() 1', function () {
@@ -131,6 +145,34 @@ describe('#populate()', function () {
   })
 })
 
+describe('double #populate() with findById', function () {
+  it('respond with matching records', function (done) {
+    Company.findById(1, 'name person').populate({ path: 'person', select: 'name contacts' })
+    .populate({ path: 'person.contacts', select: 'email name' }).then(res => {
+      let person = { id: 40, name: 'Mark Davis', email: 'mark.davis@yourcompany.example.com' }
+      res.should.be.a.instanceOf(Object).and.have.property('person').which.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Array).and.containEql(person)
+      done()
+    }).catch(err => {
+      done(err)
+    })
+  })
+})
+
+describe('double #populate() with find()', function () {
+  it('respond with matching records', function (done) {
+    Company.find({}, 'name person').populate({ path: 'person', select: 'name contacts' })
+    .populate({ path: 'person.contacts', select: 'email name' }).then(res => {
+      console.log(res)
+      let person = { id: 40, name: 'Mark Davis', email: 'mark.davis@yourcompany.example.com' }
+      res.should.be.a.instanceOf(Array).and.have.length(2)
+      res[1].should.be.a.instanceOf(Object).and.have.property('person').which.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Array).and.containEql(person)
+      done()
+    }).catch(err => {
+      done(err)
+    })
+  })
+})
+
 describe('Find document with a field containe an array of referenced id', function () {
   it('respond with matching records', function (done) {
     Person.find({'id': {$in: [1, 3, 5, 6, 7]}}, 'name contacts id').then(res => {
@@ -168,7 +210,7 @@ describe('#populate() for find', function () {
 describe('Find greater than or equal', function () {
   it('respond with matching records', function (done) {
     Person.find({'id': {$gte: 36}}, 'name contacts id').then(res => {
-      res.should.be.a.instanceOf(Array).and.have.length(8)
+      res.should.be.a.instanceOf(Array).and.have.length(9)
       done()
     }).catch(err => {
       done(err)

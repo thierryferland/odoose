@@ -6,7 +6,7 @@ class OdoosePromise extends Promise {
 
   populate (options) {
     var that = this
-    return new Promise(
+    return new OdoosePromise(
       function (resolve, reject) {
         try {
           that.then(result => {
@@ -15,7 +15,7 @@ class OdoosePromise extends Promise {
         } catch (error) {
           return reject(error)
         }
-      }
+      }, that.model
     )
   }
 }
