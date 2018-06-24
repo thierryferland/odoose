@@ -9,6 +9,7 @@
     "url": "https://tferland@bitbucket.org/foodealiste/odoose.git"
   },
   "dependencies": {
+    "object-path": "^0.11.4",
     "odoo-xmlrpc": "^1.0.6"
   },
   "devDependencies": {

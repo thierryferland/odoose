@@ -32,7 +32,12 @@ var personSchema = new odoose.Schema({
     type: Object,
     ref: 'Person',
     path: 'child_ids'
-  }]
+  }],
+  user: {
+    type: Object,
+    ref: 'User',
+    path: 'user_id'
+  }
 })
 
 var userSchema = new odoose.Schema({
@@ -162,10 +167,39 @@ describe('double #populate() with find()', function () {
   it('respond with matching records', function (done) {
     Company.find({}, 'name person').populate({ path: 'person', select: 'name contacts' })
     .populate({ path: 'person.contacts', select: 'email name' }).then(res => {
-      console.log(res)
       let person = { id: 40, name: 'Mark Davis', email: 'mark.davis@yourcompany.example.com' }
       res.should.be.a.instanceOf(Array).and.have.length(2)
       res[1].should.be.a.instanceOf(Object).and.have.property('person').which.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Array).and.containEql(person)
+      done()
+    }).catch(err => {
+      done(err)
+    })
+  })
+})
+
+describe('populate() with findbyId() for Person', function () {
+  it('respond with matching records', function (done) {
+    Person.findById(7, 'name contacts').populate({ path: 'contacts', select: 'name user' })
+    .then(res => {
+      console.log(res)
+      res.should.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Array)
+      done()
+    }).catch(err => {
+      done(err)
+    })
+  })
+})
+
+// Not working, to be done
+describe('double #populate() with findbyId() many then one', function () {
+  it('respond with matching records', function (done) {
+    Person.findById(7, 'name contacts')
+    .populate({ path: 'contacts', select: 'name user' })
+    // .populate({ path: 'contacts.user', select: 'name' })
+    .then(res => {
+      let user = {id: 4, name: 'Demo User'}
+      res.should.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Object)
+      res.contacts[0].should.have.property('user').which.containEql(user)
       done()
     }).catch(err => {
       done(err)

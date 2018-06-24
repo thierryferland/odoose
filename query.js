@@ -120,7 +120,7 @@ class Query {
                 if (schema['obj'][key].data !== undefined) {
                   adaptedResult[key] = { data: Buffer.from(result[path], 'base64'), contentType: 'image/jpeg' }
                 } else if (!Array.isArray(schema['obj'][key]) & Array.isArray(result[path])) {
-                  adaptedResult[key] = result[path][0]
+                  adaptedResult[key] = {'id': result[path][0], 'name': result[path][1]}
                 } else if (result[path] === false) {
                   adaptedResult[key] = undefined
                 } else {

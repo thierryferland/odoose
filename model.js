@@ -1,5 +1,6 @@
 const OdoosePromise = require('./promise')
 const Query = require('./query')
+const objectPath = require('object-path')
 
 class Model {
   constructor (name, schema, collectionName, connection, base) {
@@ -29,11 +30,12 @@ class Model {
   populate (options, results) {
     const queryType = 'read'
     var selectedFields = options['select'].split(' ')
+    let path = options['path']
     let paths = options['path'].split('.')
 
-    let isManyReferenced = Array.isArray(this.schema.obj[options['path']])
-    let isManyReferencing = Array.isArray(results)
+    let isManyReferenced = Array.isArray(this.schema.obj[paths[0]])
     let isEmbeddedPopulate = paths.length > 1
+    let isManyReferencing = Array.isArray(results)
 
     let referencedModelName
 
@@ -47,13 +49,15 @@ class Model {
     var collectionName = this.models.get(referencedModelName).collectionName
     let promises = []
     if (!isManyReferencing) {
-      let id = isEmbeddedPopulate ? results[paths[0]][paths[1]] : results[paths[0]]
-
+      let id = objectPath.get(results, path)
+      if (!Array.isArray(id) & typeof id === 'object') {
+        id = id['id']
+      }
       let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this)
       let func = function (resolve, reject) {
         try {
           query.exec().then(populateResult => {
-            isEmbeddedPopulate ? results[paths[0]][paths[1]] = populateResult : results[paths[0]] = populateResult
+            objectPath.set(results, path, populateResult)
             resolve(results)
           })
         } catch (error) {
@@ -63,12 +67,15 @@ class Model {
       return new OdoosePromise(func, this)
     } else {
       results.forEach(result => {
-        let id = isEmbeddedPopulate ? result[paths[0]][paths[1]] : result[paths[0]]
+        let id = objectPath.get(result, path)
+        if (!Array.isArray(id) & typeof id === 'object') {
+          id = id['id']
+        }
         let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this)
         let func = function (resolve, reject) {
           try {
             query.exec().then(populateResult => {
-              isEmbeddedPopulate ? result[paths[0]][paths[1]] = populateResult : result[paths[0]] = populateResult
+              objectPath.set(result, path, populateResult)
               resolve(result)
             })
           } catch (error) {
