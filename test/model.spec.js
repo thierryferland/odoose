@@ -273,3 +273,28 @@ describe('Find lower than', function () {
     })
   })
 })
+
+describe('#authenticate', function () {
+  it('respond with matching records', function (done) {
+    odoose.authenticate({'username': 'demo', 'password': 'demo'}).then(res => {
+      console.log(res)
+      res.should.equal(true)
+      done()
+    }).catch(err => {
+      console.log(err)
+      done(err)
+    })
+  })
+})
+
+describe('#authenticate incorrectly', function () {
+  it('respond with matching records', function (done) {
+    odoose.authenticate({'username': 'demo', 'password': 'demo2'}).then(res => {
+      var err = Error('Identification was supposed to fail')
+      done(err)
+    }).catch(err => {
+      err.should.be.instanceOf(Error)
+      done()
+    })
+  })
+})
