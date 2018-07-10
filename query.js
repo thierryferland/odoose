@@ -1,13 +1,12 @@
 var OdooPromise = require('./promise')
 
 class Query {
-  constructor (db, schema, collection, conditions, projection, queryType, model) {
+  constructor (db, schema, collection, conditions, projection, queryType) {
     this.conditions = conditions
     this.db = db
     this.schema = schema
     this.collection = collection
     this.queryType = queryType
-    this.model = model
     this.projection = projection
   }
 
@@ -148,13 +147,9 @@ class Query {
 
   exec () {
     var that = this
-    var func = function (resolve, reject) {
-      try {
-        that.db.connect(function (error, result) {
-          if (error) {
-            console.log(error)
-            reject(error)
-          }
+    return new Promise(
+      function (resolve, reject) {
+        try {
           that.setParams(that.conditions, that.projection, that.schema).then(params => {
             that.db.execute_kw(that.collection, that.queryType, params, function (error, results) {
               if (error) {
@@ -170,12 +165,10 @@ class Query {
           }).catch(e => {
             reject(e)
           })
-        })
-      } catch (error) {
-        reject(error)
-      }
-    }
-    return new OdooPromise(func, that.model)
+        } catch (error) {
+          reject(error)
+        }
+      })
   }
 }
 

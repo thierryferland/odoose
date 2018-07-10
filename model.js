@@ -5,7 +5,6 @@ const objectPath = require('object-path')
 class Model {
   constructor (name, schema, collectionName, connection, base) {
     this.modelName = name
-    // this.model = Model.prototype.model
     this.db = connection
     this.schema = schema
     this.collectionName = collectionName
@@ -16,15 +15,43 @@ class Model {
   find (conditions, projection, options) {
     var selectedFields = projection.split(' ')
     var queryType = 'search_read'
-    var query = new Query(this.db, this.schema, this.collectionName, conditions, selectedFields, queryType, this)
-    return query.exec()
+    var that = this
+    var func = function (resolve, reject) {
+      try {
+        that.db.connect(function (error, result) {
+          if (error) {
+            console.log(error)
+            reject(error)
+          }
+          var query = new Query(that.db, that.schema, that.collectionName, conditions, selectedFields, queryType)
+          resolve(query.exec())
+        })
+      } catch (error) {
+        reject(error)
+      }
+    }
+    return new OdoosePromise(func, this)
   }
 
   findById (id, projection, options) {
     var selectedFields = projection.split(' ')
     var queryType = 'read'
-    var query = new Query(this.db, this.schema, this.collectionName, id, selectedFields, queryType, this)
-    return query.exec()
+    var that = this
+    var func = function (resolve, reject) {
+      try {
+        that.db.connect(function (error, result) {
+          if (error) {
+            console.log(error)
+            reject(error)
+          }
+          var query = new Query(that.db, that.schema, that.collectionName, id, selectedFields, queryType)
+          resolve(query.exec())
+        })
+      } catch (error) {
+        reject(error)
+      }
+    }
+    return new OdoosePromise(func, this)
   }
 
   populate (options, results) {
@@ -53,7 +80,7 @@ class Model {
       if (!Array.isArray(id) & typeof id === 'object') {
         id = id['id']
       }
-      let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this)
+      let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType)
       let func = function (resolve, reject) {
         try {
           query.exec().then(populateResult => {
@@ -71,7 +98,7 @@ class Model {
         if (!Array.isArray(id) & typeof id === 'object') {
           id = id['id']
         }
-        let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this)
+        let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType)
         let func = function (resolve, reject) {
           try {
             query.exec().then(populateResult => {

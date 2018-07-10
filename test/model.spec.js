@@ -181,7 +181,6 @@ describe('populate() with findbyId() for Person', function () {
   it('respond with matching records', function (done) {
     Person.findById(7, 'name contacts').populate({ path: 'contacts', select: 'name user' })
     .then(res => {
-      console.log(res)
       res.should.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Array)
       done()
     }).catch(err => {
