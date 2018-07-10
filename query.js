@@ -1,4 +1,3 @@
-'use strict'
 var OdooPromise = require('./promise')
 
 class Query {
@@ -62,9 +61,11 @@ class Query {
                         let error = Error('The operator is not recognized')
                         reject(error)
                     }
+                    domain[0].push([schema['obj'][key].path, operator, condition])
                   })
+                } else {
+                  domain[0].push([schema['obj'][key].path, operator, condition])
                 }
-                domain[0].push([schema['obj'][key].path, operator, condition])
               }
             })
           } else {
