@@ -4,6 +4,7 @@ var Model = require('./model')
 class Odoose {
   constructor () {
     this.connections = []
+    this.opts = {}
     this.models = new Map()
     this.modelSchemas = new Map()
     this.Schema = Schema
@@ -18,8 +19,9 @@ class Odoose {
     return model
   }
 
-  connect (db, options) {
+  connect (db, opts) {
     this.connections.push(db)
+    this.opts = opts
   }
 
   authenticate (user) {

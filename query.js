@@ -1,16 +1,16 @@
-var OdooPromise = require('./promise')
-
 class Query {
-  constructor (db, schema, collection, conditions, projection, queryType) {
+  constructor (db, schema, collection, conditions, projection, queryType, opts) {
     this.conditions = conditions
     this.db = db
     this.schema = schema
     this.collection = collection
     this.queryType = queryType
     this.projection = projection
+    this.opts = opts
   }
 
   setParams (conditions, projection, schema) {
+    var that = this
     return new Promise(
       function (resolve, reject) {
         try {
@@ -88,7 +88,50 @@ class Query {
               }
             }
           })
+          if (that.opts['context'] !== undefined && that.opts['context'] !== null) {
+            options['context'] = that.opts['context']
+          }
           var params = [domain, options]
+          resolve(params)
+        } catch (error) {
+          reject(error)
+        }
+      })
+  }
+
+  setWriteParams (conditions, update, schema) {
+    var that = this
+    return new Promise(
+      function (resolve, reject) {
+        try {
+          let domain
+          domain = [conditions]
+
+          let fieldsToUpdate = {}
+          if (update === undefined) {
+            let error = new Error('No fields to update')
+            reject(error)
+          }
+          Object.keys(update).forEach((key) => {
+            let field
+            if (schema['obj'][key] !== undefined && schema['obj'][key] !== 'id') {
+              if (Array.isArray(schema['obj'][key]) && !('ref' in schema['obj'][key][0])) {
+                field = schema['obj'][key][0].path
+              } else if (!('ref' in schema['obj'][key])) {
+                field = schema['obj'][key].path
+              }
+              if (field !== undefined && field !== null) {
+                fieldsToUpdate[field] = update[key]
+              }
+            }
+          })
+
+          let options = {}
+          if (that.opts['context'] !== undefined && that.opts['context'] !== null) {
+            options['context'] = that.opts['context']
+          }
+
+          let params = [[domain, fieldsToUpdate], options]
           resolve(params)
         } catch (error) {
           reject(error)
@@ -161,6 +204,31 @@ class Query {
               }).catch(e => {
                 reject(e)
               })
+            })
+          }).catch(e => {
+            reject(e)
+          })
+        } catch (error) {
+          reject(error)
+        }
+      })
+  }
+
+  save (update) {
+    var that = this
+    return new Promise(
+      function (resolve, reject) {
+        try {
+          that.setWriteParams(that.conditions, update, that.schema).then(params => {
+            if (params[0][1] === {}) {
+              reject(new Error('No fields to update'))
+            }
+            that.db.execute_kw(that.collection, that.queryType, params, function (error, result) {
+              if (error) {
+                console.log(error)
+                reject(error)
+              }
+              resolve(result)
             })
           }).catch(e => {
             reject(e)

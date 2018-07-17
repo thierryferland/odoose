@@ -10,6 +10,7 @@ class Model {
     this.collectionName = collectionName
     this.modelSchemas = base.modelSchemas
     this.models = base.models
+    this.opts = base.opts
   }
 
   find (conditions, projection, options) {
@@ -23,7 +24,7 @@ class Model {
             console.log(error)
             reject(error)
           }
-          var query = new Query(that.db, that.schema, that.collectionName, conditions, selectedFields, queryType)
+          var query = new Query(that.db, that.schema, that.collectionName, conditions, selectedFields, queryType, that.opts)
           resolve(query.exec())
         })
       } catch (error) {
@@ -31,6 +32,52 @@ class Model {
       }
     }
     return new OdoosePromise(func, this)
+  }
+
+  getSubDocument (update, schema) {
+    let subDocuments = {}
+    Object.keys(update).forEach((field) => {
+      if (Array.isArray(schema['obj'][field]) && ('ref' in schema['obj'][field][0])) {
+        subDocuments[field] = update[field]
+      }
+    })
+    return subDocuments
+  }
+
+  updateMany (update) {
+    let promises = []
+    Object.keys(update).forEach(key => {
+      update[key].forEach(document => {
+        promises.push(this.updateOne(document['id'], document))
+      })
+    })
+    return promises
+  }
+
+  updateOne (id, update) {
+    var queryType = 'write'
+    var that = this
+    let promises = []
+    let subDocuments = this.getSubDocument(update, this.schema)
+    var func = function (resolve, reject) {
+      try {
+        that.db.connect(function (error, result) {
+          if (error) {
+            console.log(error)
+            reject(error)
+          }
+          var query = new Query(that.db, that.schema, that.collectionName, id, null, queryType, that.opts)
+          resolve(query.save(update))
+        })
+      } catch (error) {
+        reject(error)
+      }
+    }
+    promises.push(new Promise(func))
+    if (subDocuments !== {}) {
+      promises.concat(this.updateMany(subDocuments))
+    }
+    return Promise.all(promises, this)
   }
 
   findById (id, projection, options) {
@@ -44,7 +91,7 @@ class Model {
             console.log(error)
             reject(error)
           }
-          var query = new Query(that.db, that.schema, that.collectionName, id, selectedFields, queryType)
+          var query = new Query(that.db, that.schema, that.collectionName, id, selectedFields, queryType, that.opts)
           resolve(query.exec())
         })
       } catch (error) {
@@ -80,7 +127,7 @@ class Model {
       if (!Array.isArray(id) & typeof id === 'object') {
         id = id['id']
       }
-      let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType)
+      let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this.opts)
       let func = function (resolve, reject) {
         try {
           query.exec().then(populateResult => {
@@ -98,7 +145,7 @@ class Model {
         if (!Array.isArray(id) & typeof id === 'object') {
           id = id['id']
         }
-        let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType)
+        let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this.opts)
         let func = function (resolve, reject) {
           try {
             query.exec().then(populateResult => {
