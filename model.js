@@ -48,17 +48,27 @@ class Model {
     let promises = []
     Object.keys(update).forEach(key => {
       update[key].forEach(document => {
-        promises.push(this.updateOne(document['id'], document))
+        let schema
+        let referencedModelName = Array.isArray(this.schema.obj[key]) ? this.schema.obj[key][0]['ref'] : this.schema.obj[key]['ref']
+        let collectionName = this.models.get(referencedModelName).collectionName
+        schema = this.modelSchemas.get(referencedModelName)
+        promises.push(this.updateOne(document['id'], document, schema, collectionName))
       })
     })
     return promises
   }
 
-  updateOne (id, update) {
+  updateOne (id, update, schema, collectionName) {
     var queryType = 'write'
     var that = this
     let promises = []
     let subDocuments = this.getSubDocument(update, this.schema)
+    if (schema === undefined) {
+      schema = this.schema
+    }
+    if (collectionName === undefined) {
+      collectionName = this.collectionName
+    }
     var func = function (resolve, reject) {
       try {
         that.db.connect(function (error, result) {
@@ -66,7 +76,7 @@ class Model {
             console.log(error)
             reject(error)
           }
-          var query = new Query(that.db, that.schema, that.collectionName, id, null, queryType, that.opts)
+          var query = new Query(that.db, schema, collectionName, id, null, queryType, that.opts)
           resolve(query.save(update))
         })
       } catch (error) {

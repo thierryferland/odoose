@@ -114,10 +114,12 @@ class Query {
           }
           Object.keys(update).forEach((key) => {
             let field
-            if (schema['obj'][key] !== undefined && schema['obj'][key] !== 'id') {
-              if (Array.isArray(schema['obj'][key]) && !('ref' in schema['obj'][key][0])) {
+            let isOnetoManyField = Array.isArray(schema['obj'][key])
+            let isRefField = (isOnetoManyField && ('ref' in schema['obj'][key][0])) || (!isOnetoManyField && ('ref' in schema['obj'][key]))
+            if (schema['obj'][key] !== undefined && key !== 'id') {
+              if (isOnetoManyField && !isRefField) {
                 field = schema['obj'][key][0].path
-              } else if (!('ref' in schema['obj'][key])) {
+              } else if (!isRefField) {
                 field = schema['obj'][key].path
               }
               if (field !== undefined && field !== null) {

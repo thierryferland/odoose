@@ -328,19 +328,10 @@ describe('#updateOne with sub documents', function () {
 
 describe('Language specific query', function () {
   it('respond with matching records', function (done) {
-    Product.updateOne(48, {name: 'Article en FR'}).then(res => {
-      res[0].should.be.exactly(true)
-      Product.findById(48, 'name').then(res => {
-        res.should.be.a.instanceOf(Object).and.have.property('name').which.be.exactly('Article en FR')
-        Product.updateOne(48, {name: 'Windows Home Server 2011'}).then(res => {
-          res[0].should.be.exactly(true)
-          done()
-        }).catch(err => {
-          done(err)
-        })
-      }).catch(err => {
-        done(err)
-      })
+    Product.find({}, 'name').then(res => {
+      let frenchProduct = { name: 'Adaptateur USB' }
+      res.should.be.a.instanceOf(Array).and.containEql(frenchProduct)
+      done()
     }).catch(err => {
       done(err)
     })
