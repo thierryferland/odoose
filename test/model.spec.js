@@ -37,6 +37,11 @@ var personSchema = new odoose.Schema({
     type: Object,
     ref: 'User',
     path: 'user_id'
+  },
+  parent: {
+    type: Object,
+    ref: 'Person',
+    path: 'parent_id'
   }
 })
 
@@ -270,11 +275,9 @@ describe('Find lower than', function () {
 describe('#authenticate', function () {
   it('respond with matching records', function (done) {
     odoose.authenticate({'username': 'demo', 'password': 'demo'}).then(res => {
-      console.log(res)
       res.should.equal(true)
       done()
     }).catch(err => {
-      console.log(err)
       done(err)
     })
   })
@@ -322,6 +325,56 @@ describe('#updateOne with sub documents', function () {
       })
     }).catch(err => {
       done(err)
+    })
+  })
+})
+
+describe('#create person', function () {
+  it('respond with matching records', function (done) {
+    let person = new Person({name: 'Johnny Cash'})
+    person.save().then(res => {
+      res.should.be.a.instanceOf(Object).and.have.property('id')
+      Person.findById(res['id'], 'id name').then(res => {
+        res.should.be.a.instanceOf(Object).and.have.property('name').which.be.exactly('Johnny Cash')
+        done()
+      }).catch(err => {
+        done(err)
+      })
+    })
+  })
+})
+
+describe('#delete person', function () {
+  it('respond with matching records', function (done) {
+    Person.find({name: 'Johnny Cash'}, 'id name').then(res => {
+      res[0].should.be.a.instanceOf(Object).and.have.property('name').which.be.exactly('Johnny Cash')
+      Person.deleteOne({ id: res[0]['id'] }).then(res => {
+        res.should.be.exactly(true)
+        done()
+      }).catch(err => {
+        done(err)
+      })
+    })
+  })
+})
+
+describe('#add contact', function () {
+  it('respond with matching records', function (done) {
+    let person = new Person({name: 'Johnny Depp', parent: 7})
+    person.save().then(res => {
+      let johnny = res
+      res.should.be.a.instanceOf(Object).and.have.property('name').which.be.exactly('Johnny Depp')
+      Person.findById(7, 'name contacts').populate({ path: 'contacts', select: 'name' }).then(res => {
+        res.should.be.a.instanceOf(Object).and.have.property('contacts').which.have.length(5)
+        Person.deleteOne({ id: johnny['id'] }).then(res => {
+          res.should.be.exactly(true)
+          done()
+        }).catch(err => {
+          done(err)
+        })
+      }).catch(err => {
+        done(err)
+      })
     })
   })
 })

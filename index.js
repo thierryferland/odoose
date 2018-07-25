@@ -12,8 +12,8 @@ class Odoose {
   }
 
   model (name, schema, collection, skipInit) {
-    var connection = this.connections[0]
-    var model = new Model(name, schema, collection, connection, this)
+    let connection = this.connections[0]
+    let model = Model.compile(name, schema, collection, connection, this)
     this.modelSchemas.set(name, schema)
     this.models.set(name, model)
     return model

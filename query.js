@@ -114,26 +114,79 @@ class Query {
           }
           Object.keys(update).forEach((key) => {
             let field
+            let value
             let isOnetoManyField = Array.isArray(schema['obj'][key])
             let isRefField = (isOnetoManyField && ('ref' in schema['obj'][key][0])) || (!isOnetoManyField && ('ref' in schema['obj'][key]))
             if (schema['obj'][key] !== undefined && key !== 'id') {
               if (isOnetoManyField && !isRefField) {
+                value = update[key]
                 field = schema['obj'][key][0].path
-              } else if (!isRefField) {
-                field = schema['obj'][key].path
+              } else {
+                if (isRefField && Number.isInteger(update[key])) {
+                  value = update[key]
+                } else {
+                  field = schema['obj'][key].path
+                  value = update[key]
+                }
               }
               if (field !== undefined && field !== null) {
-                fieldsToUpdate[field] = update[key]
+                fieldsToUpdate[field] = value
               }
             }
           })
 
           let options = {}
-          if (that.opts['context'] !== undefined && that.opts['context'] !== null) {
+          if (that.opts !== undefined && that.opts['context'] !== undefined) {
+            options['context'] = that.opts['context']
+          }
+          let params = [[domain, fieldsToUpdate], options]
+          resolve(params)
+        } catch (error) {
+          reject(error)
+        }
+      })
+  }
+
+  setCreateParams (newDocument, schema) {
+    var that = this
+    return new Promise(
+      function (resolve, reject) {
+        try {
+          let fieldsToUpdate = {}
+          if (newDocument === undefined) {
+            let error = new Error('Nothing to create')
+            reject(error)
+          }
+          Object.keys(newDocument).forEach((key) => {
+            let field
+            let value
+            let isOnetoManyField = Array.isArray(schema['obj'][key])
+            let isRefField = (isOnetoManyField && ('ref' in schema['obj'][key][0])) || (!isOnetoManyField && ('ref' in schema['obj'][key]))
+            if (schema['obj'][key] !== undefined && key !== 'id') {
+              if (isOnetoManyField && !isRefField) {
+                value = newDocument[key]
+                field = schema['obj'][key][0].path
+              } else {
+                if (isRefField && Number.isInteger(newDocument[key])) {
+                  field = schema['obj'][key].path
+                  value = newDocument[key]
+                } else {
+                  field = schema['obj'][key].path
+                  value = newDocument[key]
+                }
+              }
+              if (field !== undefined && field !== null) {
+                fieldsToUpdate[field] = value
+              }
+            }
+          })
+
+          let options = {}
+          if (that.opts !== undefined && that.opts['context'] !== undefined) {
             options['context'] = that.opts['context']
           }
 
-          let params = [[domain, fieldsToUpdate], options]
+          let params = [[fieldsToUpdate], options]
           resolve(params)
         } catch (error) {
           reject(error)
@@ -225,7 +278,7 @@ class Query {
             if (params[0][1] === {}) {
               reject(new Error('No fields to update'))
             }
-            that.db.execute_kw(that.collection, that.queryType, params, function (error, result) {
+            that.db.execute_kw(that.collection, 'write', params, function (error, result) {
               if (error) {
                 console.log(error)
                 reject(error)
@@ -234,6 +287,50 @@ class Query {
             })
           }).catch(e => {
             reject(e)
+          })
+        } catch (error) {
+          reject(error)
+        }
+      })
+  }
+
+  create (newDocument) {
+    var that = this
+    return new Promise(
+      function (resolve, reject) {
+        try {
+          that.setCreateParams(newDocument, that.schema).then(params => {
+            if (params[0][1] === {}) {
+              reject(new Error('No fields to update'))
+            }
+            that.db.execute_kw(that.collection, 'create', params, function (error, result) {
+              if (error) {
+                console.log(error)
+                reject(error)
+              }
+              newDocument['id'] = result
+              resolve(newDocument)
+            })
+          }).catch(e => {
+            reject(e)
+          })
+        } catch (error) {
+          reject(error)
+        }
+      })
+  }
+
+  delete (id) {
+    var that = this
+    return new Promise(
+      function (resolve, reject) {
+        try {
+          that.db.execute_kw(that.collection, 'unlink', [[id]], function (error, result) {
+            if (error) {
+              console.log(error)
+              reject(error)
+            }
+            resolve(result)
           })
         } catch (error) {
           reject(error)
