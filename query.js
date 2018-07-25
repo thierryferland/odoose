@@ -170,6 +170,9 @@ class Query {
                 if (isRefField && Number.isInteger(newDocument[key])) {
                   field = schema['obj'][key].path
                   value = newDocument[key]
+                } else if (isRefField && Number.isInteger(newDocument[key]['id'])) {
+                  field = schema['obj'][key].path
+                  value = newDocument[key]['id']
                 } else {
                   field = schema['obj'][key].path
                   value = newDocument[key]

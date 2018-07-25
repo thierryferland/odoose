@@ -360,7 +360,7 @@ describe('#delete person', function () {
 
 describe('#add contact', function () {
   it('respond with matching records', function (done) {
-    let person = new Person({name: 'Johnny Depp', parent: 7})
+    let person = new Person({name: 'Johnny Depp', parent: {id: 7, name: 'Agrolait'}})
     person.save().then(res => {
       let johnny = res
       res.should.be.a.instanceOf(Object).and.have.property('name').which.be.exactly('Johnny Depp')
