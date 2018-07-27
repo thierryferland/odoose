@@ -123,7 +123,11 @@ class Query {
                 field = schema['obj'][key][0].path
               } else {
                 if (isRefField && Number.isInteger(update[key])) {
+                  field = schema['obj'][key].path
                   value = update[key]
+                } else if (isRefField && Number.isInteger(update[key]['id'])) {
+                  field = schema['obj'][key].path
+                  value = update[key]['id']
                 } else {
                   field = schema['obj'][key].path
                   value = update[key]
