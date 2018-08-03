@@ -170,7 +170,7 @@ Model.populate = function populate (options, results) {
     schema = this.modelSchemas.get(referencedModelName)
   }
   var collectionName = this.models.get(referencedModelName).collectionName
-  let promises = []
+  // let promises = []
   if (!isManyReferencing) {
     let id = objectPath.get(results, path)
     if (!Array.isArray(id) & typeof id === 'object') {
@@ -189,25 +189,46 @@ Model.populate = function populate (options, results) {
     }
     return new OdoosePromise(func, this)
   } else {
+    let ids = []
     results.forEach(result => {
       let id = objectPath.get(result, path)
       if (!Array.isArray(id) & typeof id === 'object') {
-        id = id['id']
+        ids.push(id['id'])
+      } else {
+        ids = ids.concat(id)
       }
-      let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this.opts)
-      let func = function (resolve, reject) {
-        try {
-          query.exec().then(populateResult => {
-            objectPath.set(result, path, populateResult)
-            resolve(result)
-          })
-        } catch (error) {
-          reject(error)
-        }
-      }
-      promises.push(new OdoosePromise(func, this))
     })
-    return OdoosePromise.all(promises, this)
+    let idsUnique = [...new Set(ids)]
+    let query = new Query(this.db, schema, collectionName, idsUnique, selectedFields, queryType, this.opts)
+    let func = function (resolve, reject) {
+      try {
+        query.exec().then(populateResults => {
+          let populateResultsMap = new Map()
+          populateResults.forEach(populateResult => {
+            populateResultsMap.set(populateResult['id'], populateResult)
+          })
+          results.forEach(result => {
+            let ids = objectPath.get(result, path)
+            if (!Array.isArray(ids) & typeof ids === 'object') {
+              objectPath.set(result, path, populateResultsMap.get(ids['id']))
+            } else {
+              objectPath.set(result, path, populateResultsMap.get(objectPath.get(result, path)['id']))
+              let populatedIds = []
+              ids.forEach(id => {
+                populatedIds.push(populateResultsMap.get(id))
+              })
+              objectPath.set(result, path, populatedIds)
+            }
+          })
+          resolve(results)
+        })
+      } catch (error) {
+        reject(error)
+      }
+    }
+    // promises.push(new OdoosePromise(func, this))
+
+    return new OdoosePromise(func, this)
   }
 }
 

@@ -140,7 +140,7 @@ describe('#findById() person', function () {
 
 describe('#populate()', function () {
   it('respond with matching records', function (done) {
-    User.findById(1, 'name person').populate({ path: 'person', select: 'email name' }).then(res => {
+    User.findById(1, 'name person').populate({ path: 'person', select: 'id email name' }).then(res => {
       res.should.be.a.instanceOf(Object).and.have.property('person').which.be.a.instanceOf(Object).and.have.property('email').which.be.exactly('admin@yourcompany.example.com')
       done()
     }).catch(err => {
@@ -151,8 +151,8 @@ describe('#populate()', function () {
 
 describe('double #populate() with findById', function () {
   it('respond with matching records', function (done) {
-    Company.findById(1, 'name person').populate({ path: 'person', select: 'name contacts' })
-    .populate({ path: 'person.contacts', select: 'email name' }).then(res => {
+    Company.findById(1, 'name person').populate({ path: 'person', select: 'id name contacts' })
+    .populate({ path: 'person.contacts', select: 'id email name' }).then(res => {
       let person = { id: 40, name: 'Mark Davis', email: 'mark.davis@yourcompany.example.com' }
       res.should.be.a.instanceOf(Object).and.have.property('person').which.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Array).and.containEql(person)
       done()
@@ -164,8 +164,8 @@ describe('double #populate() with findById', function () {
 
 describe('double #populate() with find()', function () {
   it('respond with matching records', function (done) {
-    Company.find({}, 'name person').populate({ path: 'person', select: 'name contacts' })
-    .populate({ path: 'person.contacts', select: 'email name' }).then(res => {
+    Company.find({}, 'name person').populate({ path: 'person', select: 'id name contacts' })
+    .populate({ path: 'person.contacts', select: 'id email name' }).then(res => {
       let person = { id: 40, name: 'Mark Davis', email: 'mark.davis@yourcompany.example.com' }
       res.should.be.a.instanceOf(Array).and.have.length(2)
       res[1].should.be.a.instanceOf(Object).and.have.property('person').which.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Array).and.containEql(person)
@@ -178,7 +178,7 @@ describe('double #populate() with find()', function () {
 
 describe('populate() with findbyId() for Person', function () {
   it('respond with matching records', function (done) {
-    Person.findById(7, 'name contacts').populate({ path: 'contacts', select: 'name user' })
+    Person.findById(7, 'name contacts').populate({ path: 'contacts', select: 'id name user' })
     .then(res => {
       res.should.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Array)
       done()
@@ -229,7 +229,7 @@ describe('#populate() for arrays', function () {
 
 describe('#populate() for find', function () {
   it('respond with matching records', function (done) {
-    Person.find({'id': {$in: [1, 3, 5, 6, 7]}}, 'name contacts').populate({ path: 'contacts', select: 'email name' }).then(res => {
+    Person.find({'id': {$in: [1, 3, 5, 6, 7]}}, 'name contacts').populate({ path: 'contacts', select: 'id email name' }).then(res => {
       res.should.be.a.instanceOf(Array).and.have.length(5)
       res[1].should.be.a.instanceOf(Object).and.have.property('contacts').which.be.a.instanceOf(Array).which.containEql({'id': 17, 'name': 'Edward Foster', 'email': 'efoster@seagate.com'})
       done()
