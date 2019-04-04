@@ -5,7 +5,7 @@ let Odoo = require('odoo-xmlrpc')
 let should = require('should')
 
 var odoo = new Odoo({
-  url: 'http://dev.la-recolte.net',
+  url: 'https://erp.staging.la-recolte.net',
   db: 'ODOOSE',
   username: 'odoose',
   password: 'odoose'
@@ -317,6 +317,26 @@ describe('#updateOne with sub documents', function () {
           }).catch(err => {
             done(err)
           })
+        }).catch(err => {
+          done(err)
+        })
+      }).catch(err => {
+        done(err)
+      })
+    }).catch(err => {
+      done(err)
+    })
+  })
+})
+
+describe('#updateOne with less sub documents', function () {
+  it('respond with matching records', function (done) {
+    Person.updateOne(7, {contacts: [ 17 ]}).then(res => {
+      res[0].should.be.exactly(true)
+      Person.findById(7, 'contacts').then(res => {
+        res.should.be.a.instanceOf(Object).and.have.property('contacts').which.be.exactly([17])
+        Person.updateOne(7, {contacts: [ 17, 32, 22, 21 ]}).then(res => {
+          done()
         }).catch(err => {
           done(err)
         })

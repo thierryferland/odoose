@@ -119,7 +119,27 @@ Model.deleteOne = function deleteOne (conditions) {
           console.log(error)
           reject(error)
         }
-        let query = new Query(that.db, that.schema, that.collectionName, conditions['id'], null, queryType, that.opts)
+        let query = new Query(that.db, that.schema, that.collectionName, [conditions['id']], null, queryType, that.opts)
+        resolve(query.delete(conditions['id']))
+      })
+    } catch (error) {
+      reject(error)
+    }
+  }
+  return new Promise(func)
+}
+
+Model.deleteMany = function deleteMany (conditions) {
+  let that = this
+  let queryType = 'unlink'
+  let func = function (resolve, reject) {
+    try {
+      that.db.connect(function (error, result) {
+        if (error) {
+          console.log(error)
+          reject(error)
+        }
+        let query = new Query(that.db, that.schema, that.collectionName, [conditions['id']], null, queryType, that.opts)
         resolve(query.delete(conditions['id']))
       })
     } catch (error) {

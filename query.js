@@ -327,12 +327,12 @@ class Query {
       })
   }
 
-  delete (id) {
+  delete (ids) {
     var that = this
     return new Promise(
       function (resolve, reject) {
         try {
-          that.db.execute_kw(that.collection, 'unlink', [[id]], function (error, result) {
+          that.db.execute_kw(that.collection, 'unlink', [id], function (error, result) {
             if (error) {
               console.log(error)
               reject(error)
