@@ -1,171 +1,291 @@
+const OdoosePromise = require('./promise')
+const Query = require('./query')
+const objectPath = require('object-path')
 
-// Shit implementation
-
-function Model (doc, fields, skipId) {
-  // var model = doc
-  // return model
-}
-
-const setParams = (conditions, projection, schema) => {
-  return new Promise(
-    function (resolve, reject) {
-      try {
-        var domain
-        if (typeof conditions === 'object') {
-          domain = [[]]
-          Object.keys(conditions).forEach((key) => {
-            domain[0].push([schema['obj'][key].path, '=', conditions[key]])
-          })
-        } else {
-          domain = [conditions]
-        }
-
-        var options = {fields: []}
-        if (projection === undefined) {
-          projection = Object.keys(schema['obj'])
-        }
-        projection.forEach((key) => {
-          var field = schema['obj'][key].path
-          if (field !== undefined) {
-            options.fields.push(field)
-          }
-        })
-        var params = [domain, options]
-        return resolve(params)
-      } catch (error) {
-        return reject(error)
+function Model (doc, schema) {
+  if (doc !== undefined && doc !== null) {
+    Object.keys(doc).forEach((field) => {
+      if (schema['obj'][field] !== undefined) {
+        this[field] = doc[field]
       }
     })
-}
-
-const adapt = (results, schema) => {
-  return new Promise(
-    function (resolve, reject) {
-      try {
-        var adaptedResults = []
-        results.forEach((result) => {
-          var adaptedResult = {}
-          Object.keys(schema['obj']).forEach((key) => {
-            var path = schema['obj'][key].path
-            var ref = schema['obj'][key].ref
-            if (path !== undefined & result[path] !== undefined) {
-              if (schema['obj'][key].data !== undefined) {
-                adaptedResult[key] = { data: Buffer.from(result[path], 'base64'), contentType: 'image/jpeg' }
-              } else if (ref !== undefined) {
-                adaptedResult[key] = {'id': result[path][0], 'name': result[path][1]}
-              } else {
-                adaptedResult[key] = result[path]
-              }
-            }
-          })
-
-          schema.virtuals.forEach((virtual) => {
-            adaptedResult[virtual.name] = virtual.get(adaptedResult)
-          })
-
-          // Object.keys(result).forEach((key) => {
-          //   var path = schema['obj'][key].path
-          //   if (schema['obj'][key].data !== undefined) {
-          //     adaptedResult[key] = { data: Buffer.from(result[path], 'base64'), contentType: 'image/jpeg' }
-          //   } else {
-          //     if (path !== undefined) {
-          //       adaptedResult[key] = result[path]
-          //     }
-          //   }
-          // })
-          adaptedResults.push(adaptedResult)
-        })
-        return resolve(adaptedResults)
-      } catch (error) {
-        return reject(error)
-      }
-    })
-}
-
-Model.compile = function (name, schema, collectionName, connection, base) {
-  var model
-  model = new Model()
-  // Bad, to to be changed
-  model.findById = this.findById
-  model.find = this.find
-  model.modelName = name
-  model.model = Model.prototype.model
-  model.db = connection
-
-  model.schema = schema
-  // model.collection = model.prototype.collection
-  model.collectionName = collectionName
-  return model
+  }
 }
 
 Model.find = function find (conditions, projection, options) {
-  var db = this.db
-  var schema = this.schema
-  var collectionName = this.collectionName
-  projection = projection.split(' ')
-  return new Promise(
-    function (resolve, reject) {
-      try {
-        db.connect(function (error, result) {
-          if (error) {
-            console.log(error)
-            return reject(error)
-          }
-          setParams(conditions, projection, schema).then(params => {
-            db.execute_kw(collectionName, 'search_read', params, function (error, results) {
-              if (error) {
-                console.log(error)
-                return reject(error)
-              }
-              adapt(results, schema).then(adaptedResults => {
-                return resolve(adaptedResults)
-              }).catch(e => {
-                return reject(e)
-              })
-            })
-          }).catch(e => {
-            return reject(e)
-          })
-        })
-      } catch (error) {
-        reject(error)
-      }
-    })
-}
-
-Model.findById = function find (id, projection, options) {
-  var db = this.db
-  var schema = this.schema
-  var collectionName = this.collectionName
   var selectedFields = projection.split(' ')
-  return new Promise(
-    function (resolve, reject) {
+  var queryType = 'search_read'
+  var that = this
+  var func = function (resolve, reject) {
+    try {
+      that.db.connect(function (error, result) {
+        if (error) {
+          console.log(error)
+          reject(error)
+        }
+        var query = new Query(that.db, that.schema, that.collectionName, conditions, selectedFields, queryType, that.opts)
+        resolve(query.exec())
+      })
+    } catch (error) {
+      reject(error)
+    }
+  }
+  return new OdoosePromise(func, this)
+}
+
+Model.getSubDocument = function getSubDocument (update, schema) {
+  let subDocuments = {}
+  Object.keys(update).forEach((field) => {
+    if (Array.isArray(schema['obj'][field]) && ('ref' in schema['obj'][field][0])) {
+      subDocuments[field] = update[field]
+    }
+  })
+  return subDocuments
+}
+
+Model.updateMany = function updateMany (update) {
+  let promises = []
+  Object.keys(update).forEach(key => {
+    update[key].forEach(document => {
+      let schema
+      let referencedModelName = Array.isArray(this.schema.obj[key]) ? this.schema.obj[key][0]['ref'] : this.schema.obj[key]['ref']
+      let collectionName = this.models.get(referencedModelName).collectionName
+      schema = this.modelSchemas.get(referencedModelName)
+      promises.push(this.updateOne(document['id'], document, schema, collectionName))
+    })
+  })
+  return promises
+}
+
+Model.updateOne = function updateOne (id, update, schema, collectionName) {
+  var queryType = 'write'
+  var that = this
+  let promises = []
+  let subDocuments = this.getSubDocument(update, this.schema)
+  if (schema === undefined) {
+    schema = this.schema
+  }
+  if (collectionName === undefined) {
+    collectionName = this.collectionName
+  }
+  var func = function (resolve, reject) {
+    try {
+      that.db.connect(function (error, result) {
+        if (error) {
+          console.log(error)
+          reject(error)
+        }
+        var query = new Query(that.db, schema, collectionName, id, null, queryType, that.opts)
+        resolve(query.save(update))
+      })
+    } catch (error) {
+      reject(error)
+    }
+  }
+  promises.push(new Promise(func))
+  if (subDocuments !== {}) {
+    promises.concat(this.updateMany(subDocuments))
+  }
+  return Promise.all(promises, this)
+}
+
+Model.createOne = function createOne (doc) {
+  var queryType = 'create'
+  var that = this
+  let func = function (resolve, reject) {
+    try {
+      that.db.connect(function (error, result) {
+        if (error) {
+          console.log(error)
+          reject(error)
+        }
+        let query = new Query(that.db, that.schema, that.collectionName, null, null, queryType, that.opts)
+        resolve(query.create(doc))
+      })
+    } catch (error) {
+      reject(error)
+    }
+  }
+  return new Promise(func)
+}
+
+Model.deleteOne = function deleteOne (conditions) {
+  let that = this
+  let queryType = 'unlink'
+  let func = function (resolve, reject) {
+    try {
+      that.db.connect(function (error, result) {
+        if (error) {
+          console.log(error)
+          reject(error)
+        }
+        let query = new Query(that.db, that.schema, that.collectionName, [conditions['id']], null, queryType, that.opts)
+        resolve(query.delete(conditions['id']))
+      })
+    } catch (error) {
+      reject(error)
+    }
+  }
+  return new Promise(func)
+}
+
+Model.deleteMany = function deleteMany (conditions) {
+  let that = this
+  let queryType = 'unlink'
+  let func = function (resolve, reject) {
+    try {
+      that.db.connect(function (error, result) {
+        if (error) {
+          console.log(error)
+          reject(error)
+        }
+        let query = new Query(that.db, that.schema, that.collectionName, [conditions['id']], null, queryType, that.opts)
+        resolve(query.delete(conditions['id']))
+      })
+    } catch (error) {
+      reject(error)
+    }
+  }
+  return new Promise(func)
+}
+
+Model.findById = function findById (id, projection, options) {
+  var selectedFields = projection.split(' ')
+  var queryType = 'read'
+  var that = this
+  var func = function (resolve, reject) {
+    try {
+      that.db.connect(function (error, result) {
+        if (error) {
+          console.log(error)
+          reject(error)
+        }
+        var query = new Query(that.db, that.schema, that.collectionName, id, selectedFields, queryType, that.opts)
+        resolve(query.exec())
+      })
+    } catch (error) {
+      reject(error)
+    }
+  }
+  return new OdoosePromise(func, this)
+}
+
+Model.populate = function populate (options, results) {
+  const queryType = 'read'
+  var selectedFields = options['select'].split(' ')
+  let path = options['path']
+  let paths = options['path'].split('.')
+
+  let isManyReferenced = Array.isArray(this.schema.obj[paths[0]])
+  let isEmbeddedPopulate = paths.length > 1
+  let isManyReferencing = Array.isArray(results)
+
+  let referencedModelName
+
+  var schema
+  isManyReferenced ? referencedModelName = this.schema.obj[paths[0]][0]['ref'] : referencedModelName = this.schema.obj[paths[0]]['ref']
+  schema = this.modelSchemas.get(referencedModelName)
+  if (isEmbeddedPopulate) {
+    referencedModelName = Array.isArray(schema.obj[paths[1]]) ? schema.obj[paths[1]][0]['ref'] : schema.obj[paths[1]]['ref']
+    schema = this.modelSchemas.get(referencedModelName)
+  }
+  var collectionName = this.models.get(referencedModelName).collectionName
+  // let promises = []
+  if (!isManyReferencing) {
+    let id = objectPath.get(results, path)
+    if (!Array.isArray(id) & typeof id === 'object') {
+      id = id['id']
+    }
+    let query = new Query(this.db, schema, collectionName, id, selectedFields, queryType, this.opts)
+    let func = function (resolve, reject) {
       try {
-        db.connect(function (error, result) {
-          if (error) {
-            console.log(error)
-            return reject(error)
-          }
-          setParams(id, selectedFields, schema).then(params => {
-            db.execute_kw(collectionName, 'read', params, function (error, result) {
-              if (error) {
-                console.log(error)
-                return reject(error)
-              }
-              adapt([result], schema).then(adaptedResults => {
-                return resolve(adaptedResults[0])
-              }).catch(e => {
-                return reject(e)
-              })
-            })
-          }).catch(e => {
-            return reject(e)
-          })
+        query.exec().then(populateResult => {
+          objectPath.set(results, path, populateResult)
+          resolve(results)
         })
       } catch (error) {
         reject(error)
       }
+    }
+    return new OdoosePromise(func, this)
+  } else {
+    let ids = []
+    results.forEach(result => {
+      let id = objectPath.get(result, path)
+      if (!Array.isArray(id) & typeof id === 'object') {
+        ids.push(id['id'])
+      } else {
+        ids = ids.concat(id)
+      }
     })
+    let idsUnique = [...new Set(ids)]
+    let query = new Query(this.db, schema, collectionName, idsUnique, selectedFields, queryType, this.opts)
+    let func = function (resolve, reject) {
+      try {
+        query.exec().then(populateResults => {
+          let populateResultsMap = new Map()
+          populateResults.forEach(populateResult => {
+            populateResultsMap.set(populateResult['id'], populateResult)
+          })
+          results.forEach(result => {
+            let ids = objectPath.get(result, path)
+            if (!Array.isArray(ids) & typeof ids === 'object') {
+              objectPath.set(result, path, populateResultsMap.get(ids['id']))
+            } else {
+              objectPath.set(result, path, populateResultsMap.get(objectPath.get(result, path)['id']))
+              let populatedIds = []
+              ids.forEach(id => {
+                populatedIds.push(populateResultsMap.get(id))
+              })
+              objectPath.set(result, path, populatedIds)
+            }
+          })
+          resolve(results)
+        })
+      } catch (error) {
+        reject(error)
+      }
+    }
+    // promises.push(new OdoosePromise(func, this))
+
+    return new OdoosePromise(func, this)
+  }
 }
 
-module.exports = exports = Model
+Model.compile = function compile (name, schema, collectionName, connection, base) {
+  let model
+  model = function model (doc, fields, skipId) {
+    // return new this.Model(doc)
+    Model.call(this, doc, schema)
+  }
+  model.modelName = name
+  model.db = connection
+  model.schema = schema
+  model.collectionName = collectionName
+  model.modelSchemas = base.modelSchemas
+  model.models = base.models
+  model.opts = base.opts
+  model.find = this.find
+  model.findById = this.findById
+  model.populate = this.populate
+  model.updateOne = this.updateOne
+  model.createOne = this.createOne
+  model.deleteOne = this.deleteOne
+  model.getSubDocument = this.getSubDocument
+  model.updateMany = this.updateMany
+  model.prototype.save = this.save
+  model.prototype.getModel = () => { return model }
+  return model
+}
+
+Model.save = function save () {
+  let model = this.getModel()
+  let doc = this
+  if ('id' in this) {
+    return model.updateOne(doc['id'], doc)
+  } else {
+    return model.createOne(doc)
+  }
+}
+
+module.exports = Model
