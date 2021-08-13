@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://tferland@bitbucket.org/foodealiste/odoose.git"
+    "url": "https://gitlab.com/la-recolte/odoose.git"
   },
   "dependencies": {
     "object-path": "^0.11.4",
