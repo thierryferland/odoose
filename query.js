@@ -214,11 +214,14 @@ class Query {
             var adaptedResult = {}
             Object.keys(schema['obj']).forEach((key) => {
               var path
+              var type
               if (schema['obj'][key] !== undefined) {
                 if (Array.isArray(schema['obj'][key])) {
                   path = schema['obj'][key][0].path
+                  type = schema['obj'][key][0].type
                 } else {
                   path = schema['obj'][key].path
+                  type = schema['obj'][key].type
                 }
               }
               if (path !== undefined & result[path] !== undefined) {
@@ -226,7 +229,7 @@ class Query {
                   adaptedResult[key] = { data: Buffer.from(result[path], 'base64'), contentType: 'image/jpeg' }
                 } else if (!Array.isArray(schema['obj'][key]) & Array.isArray(result[path])) {
                   adaptedResult[key] = {'id': result[path][0], 'name': result[path][1]}
-                } else if (result[path] === false) {
+                } else if (result[path] === false && type && type.name !== "Boolean") {
                   adaptedResult[key] = undefined
                 } else {
                   adaptedResult[key] = result[path]
